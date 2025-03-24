@@ -12,20 +12,20 @@
   
   SSP.name = "SSP2" #Medium scenario
   iscen = "baseline"
-  iscen_text = "reg_ori_edu_mort_fert_dom_mig"
+  iscen_text = "reg_ori_edu_mort_fert_dom_mig" #reg (sub-national) - ori(birth country)
   iscen_fullname = paste("e01",iscen,SSP.name,iscen_text,sep="_")
   
   baseline = T #baseline T to generate efert and emort
   
-  #ignore
-  efert = F #estimate differential fertility OR not
-  iruneduasfr= F #whether to run the eduasfr optmization 
-  newfert = F#if T then some information here
-  
-  emort = F # Now efert and iruneudasfr both are not needed 
-  irunedult =  F #whether to run the edult optmization
-  newmort = F#if T then some information here
-  
+  # #ignore
+  # efert = F #estimate differential fertility OR not
+  # iruneduasfr= F #whether to run the eduasfr optmization 
+   newfert = F#if T then some information here
+  # 
+  # emort = F # Now efert and iruneudasfr both are not needed 
+  # irunedult =  F #whether to run the edult optmization
+   newmort = F#if T then some information here
+   
   edu = F
   newedu = F#if T then some information here
   

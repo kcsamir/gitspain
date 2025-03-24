@@ -2,7 +2,7 @@
 # Here, we start filling the empty cells. We will first fill it with the WIC2 values and assumptions and update the projection
 # dttosave
 # [1] "sxdt"   "asfrdt" "emrdt" "imrdt"  "idmrdt" (in) "odmrdt" (out) "popdt"  "propdt" "srbdt"  
-if(T) {#newSSP
+if(F) {#newSSP [review for Spain]
   # stop()
   ssp.var <- read.csv("../data/India SSP variants sub-national, V2.csv")
   setDT(ssp.var)
@@ -32,7 +32,8 @@ if(T) {#newSSP
                       temp.var%>%mutate(variant="M",ssp.adj = rep(1, 18)))
 
 }
-  if(iscen=="baseline"){
+  
+if(iscen=="baseline"){
     # How to prepare the education distribution for 2020?
     #?? For countries with no new baseline data, we start the projection from 2015
     ## but use the population distribution from 2020 (agest and sex) from wpp2019?
@@ -43,23 +44,22 @@ if(T) {#newSSP
 # popdt -------------------------------------------------------------------
     id.cols <- names(popdt)[1:5]
     
-    # base-year population to be update to 2015
+    # base-year population to be update to 2021
     #popdt
-    data1<-read_csv("../data/input_data_pnas/india_AGSRE_Baseline_state_space.csv")#
-    setDT(data1)
-    # data1[,table(var)]
-    # data1%>%filter(period==2015,sex=="female",age==15,var=="pop")%>%select(edu,cc108)%>%
-    #   mutate(prop=prop.table(cc108))
+    #edu = Non applicable (e1)
     
-    #reg instead of cc #Time; sex m-f; edu e1-6; agest -5,0,5 statespace] - 2010 means 2011
-    input <- data1[,setnames(.SD,c("period","age"),c("Time","agest"))][Time==2010&var=="pop"][,var:=NULL]
-    input <- melt(input,id.vars = names(input)[1:4],
-                  variable.name = "region",value.name="pop")%>%data.table()
-    input[,`:=`(sex=substr(sex,1,1),Time = 2011)]
+    input <- readxl::read_xlsx("../data/population/Baseline.xlsx")%>%data.table()
+    names(input) <- tolower(names(input))
+    input[,unique(age)]
+    input <- input[,agest:=(tstrsplit(age,"-",keep=1))
+                   ][age=="100+",agest := 100
+                     ][,agest:=as.numeric(agest)
+                       ][,age:=NULL
+                         ][,sex := sexnames[match(sex,c("Women","Men"))]
+                           ][,edu := c(educodes,"e1")[match(education,c("Low","Medium","High","Non applicable"))]
+                             ][,region := ] 
+    input[,unique(agest)]
     
-    # check for 70
-    # xx <- unique(input$region)
-    # length(intersect(xx,regions))
     
     id.cols.here <- intersect(id.cols,names(popdt))
     popdt[,pop:=-.00009][input,  pop:=i.pop, on = id.cols.here]

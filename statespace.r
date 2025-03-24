@@ -14,14 +14,16 @@
   # regions = vardef[variables == "region", values] #?? get the states name here
   # regions =  c(paste0(regions,"_rural"),paste0(regions,"_urban"))
   
+  
+  
   regions = paste0("reg",1:17)
-  regions.nm = regions  
+  # regions.nm = regions  
   names(regions)=regions.nm
   saveRDS(regions,file = "../data/regions.rds")
   nreg = length(regions)#70
   
   origins = paste("ori",1:5,sep="")
-  nori = length(oricodes)
+  nori = length(origins)
   origins.nm = origins #?? name them
   
   
@@ -46,7 +48,7 @@
   nfertage = length(fertages) #Later for cohort - need 8
   nfertsex = 1
   
-  educodes = paste("e",1:4,sep="")
+  educodes = paste("e",1:3,sep="")
   nedu = length(educodes)
   eduages = seq(10,25,by=5) #transitions from these ages
   neduage = length(eduages)
@@ -304,7 +306,7 @@ if(iscen!="baseline"){ #ignore
   dttosave <-grep("dt$",ls(),value = T)#regex
  
   
-  for(ifile in dttosave) {
+  if(F)for(ifile in dttosave) {
     xx <- get(ifile)
     xx[,value:=NA]
     write.csv(xx[,value:=NA],file = paste0(path_scen,ifile,".csv"))

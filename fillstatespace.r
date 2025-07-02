@@ -60,7 +60,7 @@ if(iscen=="baseline"){
   popdt[,pop:=-.00009][input,  pop:=i.pop, on = id.cols.here]
   
   #check (currently for 2021)
-  popdt[Time==2021&agest==15]%>%spread(edu,pop)
+  popdt[Time==2021&agest==20]%>%spread(edu,pop)
   popdt[pop>0,sum(pop)]#47.400.201
   #input[pop>0 & agest==0 & region == "reg1" & sex == "m" & origin == "ori1", by =.(edu),sum(pop)]
   #popdt[pop>0 & agest==0 & region == "reg1" & sex == "m" & origin == "ori1", by =.(edu),sum(pop)]
@@ -94,63 +94,13 @@ if(iscen=="baseline"){
   id.cols.here <- intersect(id.cols,names(sxdt))
   sxdt[,sx:=-0.00009][survival,  sx:=i.sx, on = id.cols.here]
   sxdt[agest==100, sx:=0]
+  
+  #check
   sxdt[sx<0]
   
   # asfrdt ------------------------------------------------------------------
   
-  # #Note: for the first few periods, population by mother's edu is not available
-  # #asfrs (7)
-  # # asfrdt
-  # input <- data1%>%rename(Time=period)%>%
-  #             filter(var=="asfr")%>%
-  #             gather(region,asfr,contains("_"))%>%select(-var)%>%
-  #             mutate(sex=substr(sex,1,1),Time = Time+1)%>%
-  #             rename(agest=age)
-  # setDT(input)
-  # head(input)
-  # check
-  # xx <- unique(input$region)
-  # length(intersect(xx,regions))
-  if(F){
-  #Run it once independently
-  # if(F) source("india fertility pnas scenarios, v3.R")
-  if(F) source("fertility calc.r") #independently run
-  input <- read.csv(paste("../data/fertility/ASFR pattern 1 final 20230404.csv",sep="")) #830: added India and a correction in e1_e4 (pred1 was there instead of pred1.4m)
-  setDT(input)
-  input[,area:=stcodes$HASC[match(area,tolower(stcodes$area0))]][
-    ,region:=paste0(area,"_",tolower(residence))
-  ][,Time:=yr-2.5][,agest:=age-2.5][,sex:="f"]
-  id.cols.here <- intersect(id.cols,names(popdt))
-  asfrdt[,asfr:=-999][input,  asfr:=i.asfr, on = id.cols.here]
-  #check (currently for 2011)
-  # input[agest==15&region=="IN.AN_urban",.(agest,sex,edu,Time,asfr)]
-  # popdt[agest==15&Time==2011&region=="IN.AN_rural",.(agest,sex,edu,Time,pop)]
-  
-  #fert ssp correction
-  issp.fert.var <- ssp.var[ssp==substr(SSP.name,4,4),.(region,fert)]
-  setnames(issp.fert.var,"fert", "variant")
-  
-  asfrdt[issp.fert.var,on=.(region),variant:=variant][
-    fert.var,on=.(Time,variant),asfr:=asfr*ssp.adj][
-      ,`:=`(variant=NULL)]     
-  
-  #srb 
-  # srbdt ??think about changing srb for Indian states.. [Fengqing Chao, KC...]
-  data1[,unique(var)]
-  input <- data1%>%
-    filter(var=="sexr")%>%
-    gather(region,srb,contains("_"))%>%select(-var)%>%
-    mutate(sex=substr(sex,1,1))%>%select(region,srb)
-  setDT(input)
-  
-  
-  
-  asfrdt[,asfr:=0] 
-  asfrdt[, agest := as.numeric(agest)]
-  }
-  
-  
-
+ 
   fert <- readxl::read_xlsx("../data/Fertility_growth_projection_MED.xlsx")%>%data.table()
   #  names(input) <- tolower(names(input))
   #  input[,unique(age)]
@@ -165,25 +115,19 @@ if(iscen=="baseline"){
   asfrdt[,asfr:=-.0009][fert,  asfr:=i.asfr, on = id.cols.here]
   
   #check
-  asfrdt[asfr < 0]
-  
-  fert[region == "reg9"]
-  fert[region == "reg1" ]%>%spread(edu,asfr)
-  
-  asfrdt[agest == 15]
-  asfrdt[asfr < 0 & agest > 10 & agest <50 & region == "reg2",]%>%spread(agest,asfr)
+  # asfrdt[asfr < 0]
+  # fert[region == "reg1" ]%>%spread(edu,asfr)
+  # asfrdt[agest == 15]
   
   # srbdt -------------------------------------------------------------------
   
   # head(input)
   srbdt[,srb:=1.05]
-  
-  # SEX RATIO FROM THE UN !!!!
+  # SEX RATIO FROM THE UN?
   
   # propdt ------------------------------------------------------------------
   
   propdt <- readxl::read_xlsx("../data/propdt.xlsx")%>%data.table()
-  propdt <- propdt[,setnames(.SD,"time","Time")]
   
   # migration ---------------------------------------------------------------
   
@@ -201,12 +145,13 @@ if(iscen=="baseline"){
   ][,origin := origins[origin]]  
   
   id.cols.here <- intersect(id.cols,names(imrdt))
-  imrdt[,imr:=0][intimmi, imr:=i.imr, on = id.cols.here]
+  imrdt[,imm:=0][intimmi, imm:=i.imr, on = id.cols.here]
   
-  imrdt[imr>0,sum(imr)]
+  #check
+  imrdt[imm>0,sum(imm)]/10#3,507,373
   
   
-  #international emigration
+  #international emigration rate (per 1000)
   
   intemi <- readxl::read_xlsx("../data/International emigration_MED.xlsx")%>%data.table()
   

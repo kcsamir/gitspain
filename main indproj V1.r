@@ -34,12 +34,23 @@ unlink(dir(path_scen,full.names = T))#delete all files in the output folder
       # xx <- final.temp[sex=="f"&agest==15,.(edu,pop)][,prop:=prop.table(.SD$pop)]
     
     #agr pop 
-    pop1agr <- copy(final.temp)[agest%in%10:25][,.(pop1=sum(pop1)),by=setdiff(id.cols,"edu")]
+    pop1agr <- copy(final.temp)[agest%in%10:20][,.(pop1=sum(pop1)),by=setdiff(id.cols,"edu")]
+    pop1agr[,sum(pop1)] #7,312,340 [pop 10-24 years old in 2021 after applying mortality]
     #merge
     ieduprop[pop1agr,on=setdiff(id.cols,"edu"),`:=`(pop1=pop1*prop)]
+    ieduprop[,sum(pop1)] #7,312,340
+    #check
+    ieduprop[pop1<0]
     #check (0.9999??)
     #bring pop1edu into pop1 (update)    
-    final.temp[ieduprop,on=id.cols,`:=`(pop1=i.pop1,edutran = pop1-i.pop1)]
+    final.temp[,sum(pop1)] #45,145,411
+    final.temp[agest%in%10:20,pop1:=-0.0001
+               ][ieduprop,on=id.cols,`:=`(pop1=i.pop1,edutran = pop1-i.pop1)]
+    
+    # final.temp[,sum(pop1)] #45,145,411
+    # final.temp[pop1<0 & agest>=0]
+
+    #pick no id.cols 
     vars = names(final.temp)[7:15]
     rm(ieduprop,pop1agr)
     }
@@ -57,40 +68,52 @@ unlink(dir(path_scen,full.names = T))#delete all files in the output folder
         print(final.reg.summ)
         }
         
-       }
+     }
+    
+    stop()
      # Time     pop births    pop1 emi imm       edutran   deaths stage
   # 1: 2020 7802030      0 7518767   0   0 -1.729177e-10 283262.2  pop1
   
   #emig0 means use given education-specific migration rate
   #Here in any case - we need to adjust for scenarios + net0 
-  if(grepl("_mig",iscen_text)){
+  
+    if(grepl("_mig",iscen_text)){
+      print("Check for age and time consistency in migration")
     final.temp[copy(emrdt), #2020-2025, age at 2025, so to match with pop1 (with age at 2015)
-               on=id.cols,`:=`(emi=pop1*i.emr)]#end of the period (to be applied, age is not there)
+               on=id.cols,`:=`(emi=pop1*i.emr/1000)]#end of the period (to be applied, age is not there)
   #check age/time consistency + death (before or after migration)
    #check the scale
     #imm (need to be added)
-     
-    
+      
+      final.temp[copy(imrdt), #2020-2025, age at 2025, so to match with pop1 (with age at 2015)
+                 on=id.cols,`:=`(imm=i.imm)]#end of the period (to be applied, age is not there)    
+      
     }   
  
   if(grepl("_dom",iscen_text)){
-       #Bilateral implementation
+    #BiRegional implementation
     #-5 to be added to newborns
     # stop("xxxa;'dsflkj")   
     
-    
-    
-    pop.origin = copy(final.temp)[agest>-5&agest<=75,.(hht,Time,sex,edu,agest,pop1)]
+      # demrdt
+      # dimrdt 
       
-       dom.iper <- copy(migOD_AG)[,Time:=iper][dom.ssp, on=.(Time,hht),mrate.pred := mrate.pred * ssp.adj]
+    
+        
+    
+       #exposure rest of spain
+       final.temp[,by=.(origin,Time,sex,edu,agest,pop1),pop1C := sum(.SD$pop1)]
+    stop()
+    # final.temp[,by=.(agest),sum(pop1RoC)]
+    
+       #out dom mig
+       final.temp[copy(demrdt),on=id.cols,`:=`(odom=pop1*i.demr/1000)]
+       #in dom mig
+       final.temp[copy(dimrdt),on=id.cols,`:=`(idom=pop1RoC*i.dimr/1000)]
        
-       dom.temp = merge(pop.origin,dom.iper,allow.cartesian=TRUE)
-       dom.temp[,odom:=pop1*mrate.pred]
-       dom.temp[,sum(odom)]
+       dom.temp <- copy(final.temp)[agest>-5,by=.(origin,sex,agest,edu),.(odom=sum(odom),idom=sum(idom))]
+       dom.temp[,.(sum(odom),sum(idom))]
        
-       odom.temp <- copy(dom.temp)[,by=.(Time,hht,sex,agest,edu),.(odom=sum(.SD$odom))]
-       idom.temp <- copy(dom.temp)[,by=.(Time,dest,sex,agest,edu),.(idom=sum(.SD$odom))
-                                   ][,setnames(.SD,"dest","hht")]
        
        final.temp[odom.temp,on=id.cols,odom:=i.odom]
        final.temp[idom.temp,on=id.cols,idom:=i.idom]

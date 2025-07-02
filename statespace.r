@@ -82,7 +82,7 @@ library(dplyr)
   edupers = seq(initime,fintime+3*ts,by=ts)
   
   
-  fertages <- codes %>% filter(Variable == "age") %>% pull(Code) %>% .[. >= 10 & . <= 50 & !. %in% c(5, 100)] %>% as.numeric()
+  fertages <- codes %>% filter(Variable == "age") %>% pull(Code) %>% .[. >= 18 & . <= 45 & !. %in% c(5, 100)] %>% as.numeric()
   
 #   fertages = seq(15,45,by=5)#during the next five years
   nfertage = length(fertages) #Later for cohort - need 8

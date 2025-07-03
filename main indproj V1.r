@@ -41,14 +41,24 @@ unlink(dir(path_scen,full.names = T))#delete all files in the output folder
     ieduprop[,sum(pop1)] #7,312,340
     #check
     ieduprop[pop1<0]
+    
+    ieduprop[agest == 10]
     #check (0.9999??)
     #bring pop1edu into pop1 (update)    
     final.temp[,sum(pop1)] #45,145,411
-    final.temp[agest%in%10:20,pop1:=-0.0001
-               ][ieduprop,on=id.cols,`:=`(pop1=i.pop1,edutran = pop1-i.pop1)]
+    final.temp[,pop1temp:=pop1
+                ][agest%in%10:20,pop1:=0
+                 ][ieduprop,on=id.cols,`:=`(pop1=i.pop1)][,edutran := pop1temp-pop1
+                   ]
+    # [,pop1temp:=NULL]
     
-    # final.temp[,sum(pop1)] #45,145,411
-    # final.temp[pop1<0 & agest>=0]
+    final.temp[,by=.(agest),.(sum(pop1),sum(pop1temp,na.rm=T))]
+    
+    final.temp[,by=.(agest),.(sum(edutran))]
+    final.temp[agest==10,]
+    
+    # final.temp[,sum(pop1)] #45145411 - 37833071
+     final.temp[pop1<0 & agest>=0][,unique(edu)]
 
     #pick no id.cols 
     vars = names(final.temp)[7:15]
@@ -57,11 +67,12 @@ unlink(dir(path_scen,full.names = T))#delete all files in the output folder
 
   #check (edutran = 0)
      if(icheck){ 
-       final.summ <-final.temp[,lapply(.SD,sum),.SDcols = vars,by=.(Time)][,pop1:=pop+births-deaths][,stage:="sx_eduprop"]
+       final.summ <-final.temp[,lapply(.SD,sum),.SDcols = vars,by=.(Time
+                                                                    )][,pop1:=pop+births-deaths][,stage:="sx_eduprop"]
         print(final.summ)
         print(final.summ)
         
-       if(F) { print("reg1")
+       if(T) { print("reg1")
         final.reg.summ <-final.temp[region=="reg1",lapply(.SD,sum),.SDcols = vars,by=.(Time)
                                     ][,pop1:=pop+births-deaths][,stage:="sx_eduprop"]
         print(final.reg.summ)
@@ -70,7 +81,7 @@ unlink(dir(path_scen,full.names = T))#delete all files in the output folder
         
      }
     
-    stop()
+    
      # Time     pop births    pop1 emi imm       edutran   deaths stage
   # 1: 2020 7802030      0 7518767   0   0 -1.729177e-10 283262.2  pop1
   
@@ -98,25 +109,31 @@ unlink(dir(path_scen,full.names = T))#delete all files in the output folder
       # demrdt
       # dimrdt 
       
-    
-        
-    
        #exposure rest of spain
-       final.temp[,by=.(origin,Time,sex,edu,agest,pop1),pop1C := sum(.SD$pop1)]
-    stop()
-    # final.temp[,by=.(agest),sum(pop1RoC)]
+    
+    # final.temp[,by=.(origin,Time,sex,edu,agest),pop1C := sum(.SD$pop1)]
+    
+       final.temp[,by=.(origin,Time,sex,edu,agest),pop1RoC := sum(.SD$pop1)-pop1]
+    
+    
+     final.temp[agest==30]
     
        #out dom mig
-       final.temp[copy(demrdt),on=id.cols,`:=`(odom=pop1*i.demr/1000)]
+       final.temp[copy(demrdt),on=id.cols,`:=`(odom=pop1*i.demr)]
        #in dom mig
-       final.temp[copy(dimrdt),on=id.cols,`:=`(idom=pop1RoC*i.dimr/1000)]
+       final.temp[copy(dimrdt),on=id.cols,`:=`(idom=pop1RoC*i.dimr)]
        
-       dom.temp <- copy(final.temp)[agest>-5,by=.(origin,sex,agest,edu),.(odom=sum(odom),idom=sum(idom))]
+       #
+       dom.temp <- copy(final.temp)[agest>-5,by=.(origin,sex,agest,edu),.(odom=sum(odom),idom=sum(idom))
+                                    ][,dom.adj := odom/idom]
        dom.temp[,.(sum(odom),sum(idom))]
        
        
-       final.temp[odom.temp,on=id.cols,odom:=i.odom]
-       final.temp[idom.temp,on=id.cols,idom:=i.idom]
+       final.temp[dom.temp,on=setdiff(id.cols,c("region","Time")),idom:=idom*dom.adj
+                  ][is.nan(idom),idom:=0]
+       
+      final.temp[,.(sum(odom),sum(idom))]
+       
      }   
      
     
@@ -129,8 +146,8 @@ unlink(dir(path_scen,full.names = T))#delete all files in the output folder
       final.summ = rbind(final.summ,final.summX)
       print(final.summ)
       
-      print("UP rural")
-      final.reg.summX <-final.temp[hht=="IN.UP_urban"][,lapply(.SD,sum),.SDcols = vars,by=.(Time)][,stage:="mig"]
+      print("reg1")
+      final.reg.summX <-final.temp[region=="reg1"][,lapply(.SD,sum),.SDcols = vars,by=.(Time)][,stage:="mig"]
       final.reg.summ = rbind(final.reg.summ,final.reg.summX)
       print(final.reg.summ)
    }
@@ -140,16 +157,17 @@ unlink(dir(path_scen,full.names = T))#delete all files in the output folder
   birthsx <- final.temp[sex=="f"][,`:=`(odom=NULL,idom=NULL,emi=NULL,imm=NULL,edutran=NULL,sex=NULL)][,#this are still empty
       `:=`(popavg=.5*(.SD$pop+shift(.SD$pop1,1,NA,"lag"))),by = .(region,origin,edu)] [,
       `:=`(pop1=NULL,pop=NULL,deaths=NULL)][agest%in%15:49,][asfrdt,#age 15 at the start of iper
-       on=setdiff(id.cols,"sex"),#get the asfr 
-      `:=`(births=(popavg*ts)*(i.asfr/1000))][#calculate births
+       on=setdiff(id.cols,"sex"),#get the asfr  births per woman year of exposure
+      `:=`(births=(popavg*ts)*(i.asfr))][#calculate births 
         ,popavg:=NULL]
+  
+  
+  asfrdt[,by=.(region,origin,Time,edu),.(sum(asfr)*5)]
   
   # prepare SRB until the end
   birthsx[,`:=`(m=births*1.05/2.05,f=births**1.05/2.05)][,births:=NULL]
-  birthsx <- melt(birthsx[,`:=`(state=NULL,residence=NULL)],
-                  id=setdiff(c(id.cols,"hhtbig"),"sex"),variable.name = "sex",value.name = "births")%>%data.table()
-  
-  
+  birthsx <- melt(birthsx[,`:=`(pop1temp=NULL,pop1RoC=NULL)],
+                  id=setdiff(c(id.cols),"sex"),variable.name = "sex",value.name = "births")%>%data.table()
   
   # srb = 110
   # srp = 110/(110+100)
@@ -165,9 +183,8 @@ unlink(dir(path_scen,full.names = T))#delete all files in the output folder
     final.summ = rbind(final.summ,final.summX)
     print(final.summ)
     
-    print("UP rural")
     
-    final.reg.summX <-final.temp[hht=="IN.UP_urban"][,lapply(.SD,sum),.SDcols = vars,by=.(Time)][,pop1:=pop+births-deaths][,stage:="births"]
+    final.reg.summX <-final.temp[region=="reg1"][,lapply(.SD,sum),.SDcols = vars,by=.(Time)][,pop1:=pop+births-deaths][,stage:="births"]
     final.reg.summ = rbind(final.reg.summ,final.reg.summX)
     print(final.reg.summ)
     
@@ -194,8 +211,8 @@ unlink(dir(path_scen,full.names = T))#delete all files in the output folder
     final.summ = rbind(final.summ,final.summX)
     print(final.summ)
     
-    print("UP Urban")
-    final.reg.summX <-final.temp[hht=="IN.UP_urban"][,lapply(.SD,sum),.SDcols = vars,by=.(Time)][,pop1:=pop+births-deaths][,stage:="births"]
+    print("reg1")
+    final.reg.summX <-final.temp[region=="reg1"][,lapply(.SD,sum),.SDcols = vars,by=.(Time)][,pop1:=pop+births-deaths][,stage:="births"]
     final.reg.summ = rbind(final.reg.summ,final.reg.summX)
     print(final.reg.summ)
   }
@@ -206,13 +223,13 @@ unlink(dir(path_scen,full.names = T))#delete all files in the output folder
 
   #Update the final with pop1, births, mig, edu transition
   final[copy(final.temp),on=id.cols,
-        `:=`(deaths=i.deaths,births=i.births,imm=i.imm,emi=i.emi,odom=i.odom,idom=i.idom,edutran=i.edutran,poprecl=i.poprecl)] #new
+        `:=`(deaths=i.deaths,births=i.births,imm=i.imm,emi=i.emi,odom=i.odom,idom=i.idom,edutran=i.edutran)] #new
   
   
   #End of the period age and Time
   #prepare for the next year [5+]
   final.temp.end<-copy(final.temp)[,`:=`(Time=Time+ts,agest=agest+ts,pop=pop1,pop1=NULL)]
-  final.temp.end[agest>=120,agest:=120][,pop:=sum(pop),by=id.cols]
+  final.temp.end[agest>=100,agest:=100][,pop:=sum(pop),by=id.cols]
   
   # final.temp[,sum(pop)]
   # final.temp.end[,sum(pop)]
@@ -220,45 +237,33 @@ unlink(dir(path_scen,full.names = T))#delete all files in the output folder
   #add end of the year population to the final
   final[final.temp.end,on=id.cols,`:=`(pop = i.pop)]
   
-  if(icheck){
-
-    final.summX <-final.temp[agest>-5][,lapply(.SD,sum),.SDcols = vars,by=.(Time)
-    ][,pop1:=pop+births-deaths][,stage:="reclass"]
-    final.summ = rbind(final.summ,final.summX)
-    print(final.summ)
-    
-    print("UP Urban")
-    final.reg.summX <-final.temp[hht=="IN.UP_urban"][,lapply(.SD,sum),.SDcols = vars,by=.(Time)][,pop1:=pop+births-deaths][,stage:="reclass"]
-    final.reg.summ = rbind(final.reg.summ,final.reg.summX)
-    print(final.reg.summ)
-    }
-  
   }#loop of iper
 }#for single country 
+
+stop("..")
+
 {
 
 final <- final[pop==-999,pop:=-0.00001]#for year 2100 births
 save(final,file=paste0(path_scen,"res_",iscen_fullname,".RData",sep=""))
 
-xxx <- final[agest>-5,by=.(hht,Time),.(pop=sum(pop))
-      ][,c("state","ruban"):=tstrsplit(hht,"_")
-        ][,by=.(state,Time),prop:=prop.table(pop)]
+final[agest>-5,by=.(Time),.(pop=sum(pop))]
 
-final[,by=.(Time,sex),.(births=sum(births))]%>%spread(sex,births)%>%mutate(srb=m/f)
+# final[,by=.(Time,sex),.(births=sum(births))]%>%spread(sex,births)%>%mutate(srb=m/f)
 
 
 # xxx[state=="IN.KL"&ruban=="urban"]
 # write.csv(xxx,"../results/James total popualtion by urban and rural states V2.csv")
 
 vars = setdiff(names(final),id.cols)
-sel.area = hhts
 
-final.summ.temp <-final[hht%in%sel.area][,lapply(.SD,sum,na.rm=T),.SDcols = vars,by=.(Time)][
+
+final.summ.temp <-final[,lapply(.SD,sum,na.rm=T),.SDcols = vars,by=.(Time)][
   ,`:=`(pop=pop-births)][,pop1:=NULL] #births are already in 'pop'
 print("get absolute edu transitions")
 
-final.summ.temp <-final[hht%in%sel.area][,lapply(.SD,sum,na.rm=T),.SDcols = vars,by=.(Time,hht)][
-  ,`:=`(pop=pop-births)][,pop1:=NULL] #births are already in 'pop'
+# final.summ.temp <-final[hht%in%sel.area][,lapply(.SD,sum,na.rm=T),.SDcols = vars,by=.(Time,hht)][
+#   ,`:=`(pop=pop-births)][,pop1:=NULL] #births are already in 'pop'
  
 #final.summ.temp[,by=.(Time),.(pop[2]/sum(pop))]
 

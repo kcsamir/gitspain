@@ -284,7 +284,7 @@ if(iscen!="baseline"){ #ignore
   #make individual data.table for each variable
   popdt <- expand.grid(region = regions,
                        origin = origins,
-                       Time=pers[1],
+                       Time=pers,
                        sex=sexcodes,
                        edu=educodes,
                        agest=ages,

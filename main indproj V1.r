@@ -91,7 +91,7 @@ unlink(dir(path_scen,full.names = T))#delete all files in the output folder
     if(grepl("_mig",iscen_text)){
       print("Check for age and time consistency in migration")
     final.temp[copy(emrdt), #2020-2025, age at 2025, so to match with pop1 (with age at 2015)
-               on=id.cols,`:=`(emi=pop1*i.emr/1000)]#end of the period (to be applied, age is not there)
+               on=id.cols,`:=`(emi=pop1*i.emr)]#end of the period (to be applied, age is not there)
   #check age/time consistency + death (before or after migration)
    #check the scale
     #imm (need to be added)

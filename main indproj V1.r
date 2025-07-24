@@ -154,6 +154,7 @@ unlink(dir(path_scen,full.names = T))#delete all files in the output folder
    
      
   #births # move to spanish
+
   birthsx <- final.temp[sex=="f"][,`:=`(odom=NULL,idom=NULL,emi=NULL,imm=NULL,edutran=NULL,sex=NULL)][,#this are still empty
       `:=`(popavg=.5*(.SD$pop+shift(.SD$pop1,1,NA,"lag"))),by = .(region,origin,edu)] [,
       `:=`(pop1=NULL,pop=NULL,deaths=NULL)][agest%in%15:49,][asfrdt,#age 15 at the start of iper
@@ -161,22 +162,23 @@ unlink(dir(path_scen,full.names = T))#delete all files in the output folder
       `:=`(births=(popavg*ts)*(i.asfr))][#calculate births 
         ,popavg:=NULL]
   
+  birthsx[births < 0, births := 0]
   
   asfrdt[,by=.(region,origin,Time,edu),.(sum(asfr)*5)]
   
   # prepare SRB until the end
-  birthsx[,`:=`(m=births*1.05/2.05,f=births**1.05/2.05)][,births:=NULL]
+  birthsx[,`:=`(m=births*1.05/2.05,f=births*1.05/2.05)][,births:=NULL]
   birthsx <- melt(birthsx[,`:=`(pop1temp=NULL,pop1RoC=NULL)],
                   id=setdiff(c(id.cols),"sex"),variable.name = "sex",value.name = "births")%>%data.table()
+  
   
   # srb = 110
   # srp = 110/(110+100)
   # ,hhtbig=NULL
-  
+  # birthsx[, origin := "ori1"]
   #update births to mother's row (later to update the final initime)
   final.temp[birthsx,on=id.cols,`:=`(births=i.births)]
   # final.summ <-final.temp[hht=="reg356",lapply(.SD,sum),.SDcols = vars,by=.(Time)][,pop1:=pop+births-pop1]
-  
   if(icheck) {
     final.summX <-final.temp[agest>-5][,lapply(.SD,sum),.SDcols = vars,by=.(Time)
     ][,pop1:=pop+births-deaths][,stage:="births"]
@@ -236,7 +238,7 @@ unlink(dir(path_scen,full.names = T))#delete all files in the output folder
    
   #add end of the year population to the final
   final[final.temp.end,on=id.cols,`:=`(pop = i.pop)]
-  
+
   }#loop of iper
 }#for single country 
 
@@ -249,8 +251,11 @@ save(final,file=paste0(path_scen,"res_",iscen_fullname,".RData",sep=""))
 
 final[agest>-5,by=.(Time),.(pop=sum(pop))]
 
-# final[,by=.(Time,sex),.(births=sum(births))]%>%spread(sex,births)%>%mutate(srb=m/f)
+final[agest > -5 & region == "reg14" & origin == "ori4", 
+      by = .(region, Time), 
+      .(pop = sum(pop))]
 
+# final[,by=.(Time,sex),.(births=sum(births))]%>%spread(sex,births)%>%mutate(srb=m/f)
 
 # xxx[state=="IN.KL"&ruban=="urban"]
 # write.csv(xxx,"../results/James total popualtion by urban and rural states V2.csv")
@@ -321,3 +326,9 @@ if(F){
 }
 }#End Projection
 # See "Report WIC3.Rmd"
+
+
+
+
+
+

@@ -31,13 +31,15 @@ unlink(dir(path_scen,full.names = T))#delete all files in the output folder
       ,`:=`(Time=Time-5,agest=agest-5)][prop<0,prop:=0.001][
       ,.(edu=edu,prop=prop.table(prop)),by=setdiff(id.cols,"edu")]
 
-      # xx <- final.temp[sex=="f"&agest==15,.(edu,pop)][,prop:=prop.table(.SD$pop)]
+    ieduprop[region=="reg1"]  
+    
+    # xx <- final.temp[sex=="f"&agest==15,.(edu,pop)][,prop:=prop.table(.SD$pop)]
     
     #agr pop 
     pop1agr <- copy(final.temp)[agest%in%10:20][,.(pop1=sum(pop1)),by=setdiff(id.cols,"edu")]
     pop1agr[,sum(pop1)] #7,312,340 [pop 10-24 years old in 2021 after applying mortality]
     #merge
-    ieduprop[pop1agr,on=setdiff(id.cols,"edu"),`:=`(pop1=pop1*prop)]
+    ieduprop[pop1agr,on=setdiff(id.cols,"edu"),`:=`(pop1=i.pop1*prop)]
     ieduprop[,sum(pop1)] #7,312,340
     #check
     ieduprop[pop1<0]
@@ -46,16 +48,18 @@ unlink(dir(path_scen,full.names = T))#delete all files in the output folder
     #check (0.9999??)
     #bring pop1edu into pop1 (update)    
     final.temp[,sum(pop1)] #45,145,411
-    final.temp[,pop1temp:=pop1
-                ][agest%in%10:20,pop1:=0
+    final.temp[,pop1temp:=pop1 #initial values
+                ][agest%in%10:20,pop1:=0 # intialize make zero
                  ][ieduprop,on=id.cols,`:=`(pop1=i.pop1)][,edutran := pop1temp-pop1
                    ]
     # [,pop1temp:=NULL]
     
-    final.temp[,by=.(agest),.(sum(pop1),sum(pop1temp,na.rm=T))]
+    
+    
+    
+    final.temp[,by=.(agest),.(pop1old = sum(pop1),pop1new = sum(pop1temp,na.rm=T))]
     
     final.temp[,by=.(agest),.(sum(edutran))]
-    final.temp[agest==10,]
     
     # final.temp[,sum(pop1)] #45145411 - 37833071
      final.temp[pop1<0 & agest>=0][,unique(edu)]
@@ -91,7 +95,7 @@ unlink(dir(path_scen,full.names = T))#delete all files in the output folder
     if(grepl("_mig",iscen_text)){
       print("Check for age and time consistency in migration")
     final.temp[copy(emrdt), #2020-2025, age at 2025, so to match with pop1 (with age at 2015)
-               on=id.cols,`:=`(emi=pop1*i.emr)]#end of the period (to be applied, age is not there)
+               on=id.cols,`:=`(emi=pop1*i.emr/1000)]#end of the period (to be applied, age is not there)
   #check age/time consistency + death (before or after migration)
    #check the scale
     #imm (need to be added)
@@ -154,20 +158,22 @@ unlink(dir(path_scen,full.names = T))#delete all files in the output folder
    
      
   #births # move to spanish
-
+id.cols.here = setdiff(id.cols,"sex")
   birthsx <- final.temp[sex=="f"][,`:=`(odom=NULL,idom=NULL,emi=NULL,imm=NULL,edutran=NULL,sex=NULL)][,#this are still empty
       `:=`(popavg=.5*(.SD$pop+shift(.SD$pop1,1,NA,"lag"))),by = .(region,origin,edu)] [,
       `:=`(pop1=NULL,pop=NULL,deaths=NULL)][agest%in%15:49,][asfrdt,#age 15 at the start of iper
-       on=setdiff(id.cols,"sex"),#get the asfr  births per woman year of exposure
+       on=id.cols.here,#get the asfr  births per woman year of exposure
       `:=`(births=(popavg*ts)*(i.asfr))][#calculate births 
-        ,popavg:=NULL]
+        ,popavg:=NULL
+        ][,origin:="ori1"][,by=id.cols.here,.(births=sum(births))] #Spanish born
   
-  birthsx[births < 0, births := 0]
+  # birthsx[births < 0, births := 0]
   
-  asfrdt[,by=.(region,origin,Time,edu),.(sum(asfr)*5)]
+  # asfrdt[,by=.(region,origin,Time,edu),.(sum(asfr)*5)]
+  
   
   # prepare SRB until the end
-  birthsx[,`:=`(m=births*1.05/2.05,f=births*1.05/2.05)][,births:=NULL]
+  birthsx[,`:=`(m=births*1.05/2.05,f=births*1/2.05)][,births:=NULL]
   birthsx <- melt(birthsx[,`:=`(pop1temp=NULL,pop1RoC=NULL)],
                   id=setdiff(c(id.cols),"sex"),variable.name = "sex",value.name = "births")%>%data.table()
   
@@ -178,10 +184,14 @@ unlink(dir(path_scen,full.names = T))#delete all files in the output folder
   # birthsx[, origin := "ori1"]
   #update births to mother's row (later to update the final initime)
   final.temp[birthsx,on=id.cols,`:=`(births=i.births)]
+  
+  # birthsx[,sum(births)]
+  # final.temp[,sum(births)]
+  
   # final.summ <-final.temp[hht=="reg356",lapply(.SD,sum),.SDcols = vars,by=.(Time)][,pop1:=pop+births-pop1]
   if(icheck) {
     final.summX <-final.temp[agest>-5][,lapply(.SD,sum),.SDcols = vars,by=.(Time)
-    ][,pop1:=pop+births-deaths][,stage:="births"]
+    ][,pop1:=pop1 + births][,stage:="births"]
     final.summ = rbind(final.summ,final.summX)
     print(final.summ)
     
@@ -242,12 +252,12 @@ unlink(dir(path_scen,full.names = T))#delete all files in the output folder
   }#loop of iper
 }#for single country 
 
-stop("..")
+
 
 {
 
 final <- final[pop==-999,pop:=-0.00001]#for year 2100 births
-save(final,file=paste0(path_scen,"res_",iscen_fullname,".RData",sep=""))
+saveRDS(final,file=paste0(path_scen,"res_",iscen_fullname,".rds",sep=""))
 
 final[agest>-5,by=.(Time),.(pop=sum(pop))]
 
@@ -296,36 +306,7 @@ for(ifile in dttosave) {
   # if(username=="kc") save(xxx,file=paste(pdrive_path_scen,ifile,".RData",sep=""))
 }  
 
-
-#quick pyramid
-if(F){
-  # final
-  dir(path_scen)
-  dir(path_scen,pattern = "res_")
-  # load(file=paste(path_scen,"res_",iscen_fullname,as.numeric(Sys.time()),".RData",sep=""))
-  final<-final[,scen:="Med"][Time<2096]
-  source("funstack from mcbm.r")
-  hhts
-  ihht = "IN.MH_urban"#hhts[1]
-  icnt =  ihht
-  
-  # function(figval,ivar,iage,isex,ihhts,icnt,itob,iiscen,ipropgraph=F,iscale=1,ihht=ihht)
-  
-  ggpyr2011<-funpyrwrapper_mcbm(figval = copy(final),
-                           ivar="pop",
-                           iTime=2011,
-                           iiscen="Med",#can be deleted
-                           iscale=1000)
-  ggpyr2011
-  ggpyr.col<-funpyrwrapper_mcbm(figval = copy(final),
-                                ivar="pop",
-                                iTime = unique(final$Time),
-                                iiscen="Med",#can be deleted
-                                iscale=1000)
-  ggpyr.col
-}
 }#End Projection
-# See "Report WIC3.Rmd"
 
 
 

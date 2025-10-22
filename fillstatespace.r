@@ -75,8 +75,8 @@ if(iscen=="baseline"){
   ### Sx_converging --> Survival growth, converging education differential in 2071
   ### Sx_maintaing --> --> Survival growth, maintaining education differential in 2071
   
-  
-  survival <- readxl::read_xlsx("../data/Sx_Maintaining.xlsx")%>%data.table()
+  unique(survival$origin)
+  survival <- readxl::read_xlsx("../data/Sx_maintaining.xlsx")%>%data.table()
   #  names(input) <- tolower(names(input))
   #  input[,unique(age)]
   survival <- survival[,agest:=(tstrsplit(age,"-",keep=1))
@@ -101,9 +101,10 @@ if(iscen=="baseline"){
   # asfrdt ------------------------------------------------------------------
   
  
-  fert <- readxl::read_xlsx("../data/Fertility_growth_projection_LOW2.xlsx")%>%data.table()
-  #LOW2 = Exp convergence (50%/100% in 2071) towards spanish  
+  fert <- readxl::read_xlsx("../data/Fertility_MED_scenario.xlsx")%>%data.table()
+  #LOW2 = Exp convergence (50%/100% in 2071) towards spanish Fertility_growth_projection_LOW2.xlsx  
   #LOW3 = Linear convergence to High educated
+  # corrected fertility 100% in 2081: Fertility_MED_scenario.xlsx
   #  names(input) <- tolower(names(input))
   #  input[,unique(age)]
   
@@ -137,7 +138,7 @@ if(iscen=="baseline"){
   #  names(input) <- tolower(names(input))
   #  input[,unique(age)]
   
-  #                            International immigration_MED1     International immigration_HIGH(INE).   International immigration(NEW EDU).xlsx
+  #                            International immigration_MED1     International immigration_HIGH(INE)   International immigration(NEW EDU).xlsx
   
   intimmi <- intimmi[,agest:=(tstrsplit(age,"-",keep=1))
   ][age=="100+",agest := 100
@@ -157,7 +158,7 @@ if(iscen=="baseline"){
   
   #international emigration rate (per 1000)
   
-  intemi <- readxl::read_xlsx("../data/International emigration_HIGH..xlsx")%>%data.table()
+  intemi <- readxl::read_xlsx("../data/International_emigration_MED_scenario1.xlsx")%>%data.table()
   #                          International emigration_MED1      International emigration_HIGH.
   intemi <- intemi[,agest:=(tstrsplit(age,"-",keep=1))
   ][age=="100+",agest := 100
@@ -182,7 +183,7 @@ if(iscen=="baseline"){
   
   # internal immigration
   
-  domimmi <- readxl::read_xlsx("../data/Internal immigration(INE).xlsx")%>%data.table()
+  domimmi <- readxl::read_xlsx("../data/Internal immigration_MED1..xlsx")%>%data.table()
 #"../data/Internal immigration_MED1.xlsx"   Internal immigration(INE).xlsx        Internal immigration_MED1..xlsx
   domimmi <- domimmi[,agest:=(tstrsplit(age,"-",keep=1)) 
   ][age=="100+",agest := 100
@@ -208,7 +209,7 @@ if(iscen=="baseline"){
   
   #internal emigration
   
-  domemi <- readxl::read_xlsx("../data/Internal emigration(INE).xlsx")%>%data.table()
+  domemi <- readxl::read_xlsx("../data/Internal emigration_MED1..xlsx")%>%data.table()
   #"../data/Internal emigration_MED1.xlsx"    Internal emigration(INE).xlsx             "../data/Internal emigration_MED1..xlsx" 
   #  names(input) <- tolower(names(input))
   #  input[,unique(age)]
